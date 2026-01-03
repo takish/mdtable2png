@@ -406,6 +406,44 @@
     .form-row-split .form-row:first-child {
       border-left: none;
     }
+
+    /* Checkbox group */
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .checkbox-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+    }
+
+    .checkbox-item label {
+      font-size: 13px;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .checkbox-item.disabled {
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
@@ -472,6 +510,38 @@
           </div>
         </div>
       </div>
+      <div class="form-row">
+        <label class="form-label">タイプ</label>
+        <div class="form-control">
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="typeTable" value="table" checked>
+              <label for="typeTable">表</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="typeProg" value="prog" checked>
+              <label for="typeProg">進行</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="typeDeg" value="deg" checked>
+              <label for="typeDeg">度数</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="typeScore" value="score" checked>
+              <label for="typeScore">楽譜</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">自動検出</label>
+        <div class="form-control">
+          <div class="checkbox-item" style="background: transparent; padding: 0;">
+            <input type="checkbox" id="autoDetect" checked>
+            <label for="autoDetect" style="font-size: 13px; color: var(--text-secondary);">プレーンテキストからコード進行を検出</label>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Convert Button -->
@@ -482,6 +552,35 @@
     </div>
 
     <div class="result hidden" id="result"></div>
+
+    <!-- Regenerate from Manifest -->
+    <p class="section-header" style="margin-top: 24px;">再生成</p>
+    <div class="section">
+      <div class="drop-zone" id="manifestDropZone">
+        <div class="drop-zone-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+        </div>
+        <div class="drop-zone-text">
+          manifest.json をドラッグ＆ドロップ<br>
+          または<span class="link">ファイルを選択</span>
+        </div>
+      </div>
+      <div class="file-selected hidden" id="manifestSelected">
+        <div class="file-icon">📋</div>
+        <div class="file-info">
+          <div class="file-name" id="manifestFileName"></div>
+          <div class="file-path" id="manifestFilePath"></div>
+        </div>
+        <button class="file-clear" id="clearManifest">✕</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="regenerateBtn" disabled style="background: var(--success);">再生成</button>
+    <div class="loading" id="regenerateLoading">
+      <div class="spinner"></div>
+      <span class="loading-text">再生成中...</span>
+    </div>
   </div>
 
   <script>
@@ -527,11 +626,10 @@
       }
     });
 
-    // Drag and drop
+    // Drag and drop - prevent browser default handling
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
       document.addEventListener(eventName, (e) => {
         e.preventDefault();
-        e.stopPropagation();
       }, false);
     });
 
@@ -626,21 +724,42 @@
       }
     });
 
+    // Get selected block types
+    function getSelectedTypes() {
+      const types = [];
+      if (document.getElementById('typeTable').checked) types.push('table');
+      if (document.getElementById('typeProg').checked) types.push('prog');
+      if (document.getElementById('typeDeg').checked) types.push('deg');
+      if (document.getElementById('typeScore').checked) types.push('score');
+      return types;
+    }
+
     // Convert
     convertBtn.addEventListener('click', async () => {
       if (!selectedFilePath || !electronApi) return;
+
+      const types = getSelectedTypes();
+      if (types.length === 0) {
+        result.className = 'result error';
+        result.innerHTML = `<div class="result-title">✕ エラー</div><p>少なくとも1つのタイプを選択してください</p>`;
+        result.classList.remove('hidden');
+        return;
+      }
 
       convertBtn.classList.add('hidden');
       loading.classList.add('show');
       result.classList.add('hidden');
 
       try {
-        const response = await electronApi.convertTables({
+        const autoDetectEnabled = document.getElementById('autoDetect').checked;
+        const response = await electronApi.convertBlocks({
           inputPath: selectedFilePath,
           outputDir: outputDir.value || './out',
           color: colorText.value,
           width: parseInt(widthInput.value) || 1200,
           scale: parseInt(scaleInput.value) || 2,
+          types: types,
+          autoDetect: autoDetectEnabled,
         });
 
         loading.classList.remove('show');
@@ -650,7 +769,7 @@
           lastOutputDir = response.outputDir;
           result.className = 'result success';
           result.innerHTML = `
-            <div class="result-title">✓ ${response.files.length} 個のテーブルを変換しました</div>
+            <div class="result-title">✓ ${response.files.length} 個のブロックを変換しました</div>
             <ul class="result-files">
               ${response.files.map(f => `<li>${f}</li>`).join('')}
             </ul>
@@ -681,6 +800,135 @@
     }
 
     window.openResultFolder = openResultFolder;
+
+    // ===== Manifest Regeneration =====
+    const manifestDropZone = document.getElementById('manifestDropZone');
+    const manifestSelected = document.getElementById('manifestSelected');
+    const manifestFileName = document.getElementById('manifestFileName');
+    const manifestFilePath = document.getElementById('manifestFilePath');
+    const clearManifest = document.getElementById('clearManifest');
+    const regenerateBtn = document.getElementById('regenerateBtn');
+    const regenerateLoading = document.getElementById('regenerateLoading');
+
+    let selectedManifestPath = null;
+
+    // Manifest selection via click
+    manifestDropZone.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!electronApi) return;
+
+      try {
+        // 出力ディレクトリをデフォルトパスとして使用
+        const defaultPath = outputDir.value || './out';
+        const path = await electronApi.selectManifest(defaultPath);
+        if (path) {
+          setSelectedManifest(path);
+        }
+      } catch (err) {
+        console.error('Manifest selection error:', err);
+      }
+    });
+
+    // Manifest drag and drop
+    manifestDropZone.addEventListener('dragenter', () => {
+      manifestDropZone.classList.add('dragover');
+    });
+
+    manifestDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      manifestDropZone.classList.add('dragover');
+    });
+
+    manifestDropZone.addEventListener('dragleave', (e) => {
+      if (!manifestDropZone.contains(e.relatedTarget)) {
+        manifestDropZone.classList.remove('dragover');
+      }
+    });
+
+    manifestDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      manifestDropZone.classList.remove('dragover');
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+
+        // Check if it's a JSON file (manifest.json)
+        if (file.name.endsWith('.json')) {
+          if (file.path) {
+            setSelectedManifest(file.path);
+          }
+        }
+      }
+    });
+
+    function setSelectedManifest(path) {
+      selectedManifestPath = path;
+      const parts = path.split('/');
+      manifestFileName.textContent = parts.pop();
+      manifestFilePath.textContent = parts.join('/');
+      manifestDropZone.classList.add('hidden');
+      manifestSelected.classList.remove('hidden');
+      regenerateBtn.disabled = false;
+      result.classList.add('hidden');
+    }
+
+    clearManifest.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedManifestPath = null;
+      manifestDropZone.classList.remove('hidden');
+      manifestSelected.classList.add('hidden');
+      regenerateBtn.disabled = true;
+    });
+
+    // Regenerate from manifest
+    regenerateBtn.addEventListener('click', async () => {
+      if (!selectedManifestPath || !electronApi) return;
+
+      regenerateBtn.classList.add('hidden');
+      regenerateLoading.classList.add('show');
+      result.classList.add('hidden');
+
+      try {
+        const response = await electronApi.regenerateFromManifest({
+          manifestPath: selectedManifestPath,
+          color: colorText.value,
+          width: parseInt(widthInput.value) || 1200,
+          scale: parseInt(scaleInput.value) || 2,
+        });
+
+        regenerateLoading.classList.remove('show');
+        regenerateBtn.classList.remove('hidden');
+
+        if (response.success) {
+          lastOutputDir = response.outputDir;
+          result.className = 'result success';
+          result.innerHTML = `
+            <div class="result-title">✓ ${response.files.length} 個のブロックを再生成しました</div>
+            <ul class="result-files">
+              ${response.files.map(f => `<li>${f}</li>`).join('')}
+            </ul>
+            <div class="result-actions">
+              <button class="btn btn-success" onclick="openResultFolder()">Finder で開く</button>
+            </div>
+          `;
+        } else {
+          result.className = 'result error';
+          result.innerHTML = `<div class="result-title">✕ エラー</div><p>${response.error}</p>`;
+        }
+
+        result.classList.remove('hidden');
+      } catch (err) {
+        console.error('Regenerate error:', err);
+        regenerateLoading.classList.remove('show');
+        regenerateBtn.classList.remove('hidden');
+        result.className = 'result error';
+        result.innerHTML = `<div class="result-title">✕ エラー</div><p>${err.message}</p>`;
+        result.classList.remove('hidden');
+      }
+    });
   </script>
 </body>
 </html>
