@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
+  <title>mdtable2png</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f7;
+      --bg-tertiary: #e8e8ed;
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --border: #d2d2d7;
+      --success: #34c759;
+      --error: #ff3b30;
+      --control-bg: #ffffff;
+      --control-border: #c7c7cc;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1c1c1e;
+        --bg-secondary: #2c2c2e;
+        --bg-tertiary: #3a3a3c;
+        --text-primary: #f5f5f7;
+        --text-secondary: #98989d;
+        --accent: #0a84ff;
+        --accent-hover: #409cff;
+        --border: #38383a;
+        --success: #30d158;
+        --error: #ff453a;
+        --control-bg: #1c1c1e;
+        --control-border: #48484a;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Title bar area */
+    .titlebar {
+      height: 52px;
+      background: var(--bg-primary);
+      border-bottom: 0.5px solid var(--border);
+      -webkit-app-region: drag;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .titlebar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .container {
+      padding: 68px 20px 20px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* Section styling */
+    .section {
+      background: var(--bg-primary);
+      border-radius: 10px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: -0.08px;
+      padding: 8px 16px 6px;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      -webkit-app-region: no-drag;
+    }
+
+    .drop-zone:hover {
+      background: var(--bg-secondary);
+    }
+
+    .drop-zone.dragover {
+      background: rgba(0, 113, 227, 0.1);
+    }
+
+    .drop-zone-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      opacity: 0.4;
+    }
+
+    .drop-zone-icon svg {
+      width: 100%;
+      height: 100%;
+      fill: var(--text-primary);
+    }
+
+    .drop-zone-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .drop-zone-text .link {
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* File selected state */
+    .file-selected {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      gap: 12px;
+    }
+
+    .file-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-path {
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-clear {
+      width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      background: var(--bg-tertiary);
+      border: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-app-region: no-drag;
+    }
+
+    .file-clear:hover {
+      background: var(--border);
+    }
+
+    /* Form row */
+    .form-row {
+      display: flex;
+      align-items: center;
+      padding: 11px 16px;
+      border-top: 0.5px solid var(--border);
+      -webkit-app-region: no-drag;
+    }
+
+    .form-row:first-child {
+      border-top: none;
+    }
+
+    .form-label {
+      font-size: 15px;
+      color: var(--text-primary);
+      flex-shrink: 0;
+      width: 100px;
+    }
+
+    .form-control {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 0.5px solid var(--control-border);
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: inherit;
+      background: var(--control-bg);
+      color: var(--text-primary);
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+    }
+
+    input[type="color"] {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: 0.5px solid var(--border);
+      border-radius: 6px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      -webkit-app-region: no-drag;
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 10px;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Loading */
+    .loading {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: 10px;
+    }
+
+    .loading.show {
+      display: flex;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    /* Result */
+    .result {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .result.success {
+      background: rgba(52, 199, 89, 0.1);
+      color: var(--success);
+    }
+
+    .result.error {
+      background: rgba(255, 59, 48, 0.1);
+      color: var(--error);
+    }
+
+    .result-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .result-files {
+      margin: 8px 0;
+      padding-left: 20px;
+      color: var(--text-primary);
+    }
+
+    .result-files li {
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .result-actions {
+      margin-top: 12px;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #ffffff;
+    }
+
+    .btn-success:hover {
+      opacity: 0.9;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Small number input */
+    input[type="number"].small {
+      width: 80px;
+      text-align: center;
+    }
+
+    .form-row-split {
+      display: flex;
+      gap: 0;
+    }
+
+    .form-row-split .form-row {
+      flex: 1;
+      border-left: 0.5px solid var(--border);
+    }
+
+    .form-row-split .form-row:first-child {
+      border-left: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="titlebar">
+    <span class="titlebar-title">mdtable2png</span>
+  </div>
+
+  <div class="container">
+    <!-- File Selection -->
+    <p class="section-header">入力ファイル</p>
+    <div class="section">
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6C4.9 2 4 2.9 4 4v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
+          </svg>
+        </div>
+        <div class="drop-zone-text">
+          Markdown ファイルをドラッグ＆ドロップ<br>
+          または<span class="link">ファイルを選択</span>
+        </div>
+      </div>
+      <div class="file-selected hidden" id="fileSelected">
+        <div class="file-icon">📄</div>
+        <div class="file-info">
+          <div class="file-name" id="fileName"></div>
+          <div class="file-path" id="filePath"></div>
+        </div>
+        <button class="file-clear" id="clearFile">✕</button>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <p class="section-header">設定</p>
+    <div class="section">
+      <div class="form-row">
+        <label class="form-label">出力先</label>
+        <div class="form-control">
+          <input type="text" id="outputDir" value="./out" placeholder="./out">
+          <button class="btn btn-secondary" id="selectOutputDir">選択...</button>
+          <button class="btn btn-secondary" id="openOutputDir">開く</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">カラー</label>
+        <div class="form-control">
+          <input type="color" id="colorPicker" value="#E91E63">
+          <input type="text" id="colorText" value="#E91E63" style="flex:1">
+        </div>
+      </div>
+      <div class="form-row-split">
+        <div class="form-row">
+          <label class="form-label">幅</label>
+          <div class="form-control">
+            <input type="number" id="width" value="1200" min="400" max="2400" class="small">
+            <span style="color: var(--text-secondary); font-size: 13px;">px</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">スケール</label>
+          <div class="form-control">
+            <input type="number" id="scale" value="2" min="1" max="4" class="small">
+            <span style="color: var(--text-secondary); font-size: 13px;">x</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Convert Button -->
+    <button class="btn btn-primary" id="convertBtn" disabled>変換</button>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span class="loading-text">変換中...</span>
+    </div>
+
+    <div class="result hidden" id="result"></div>
+  </div>
+
+  <script>
+    const electronApi = window.api;
+
+    // Elements
+    const dropZone = document.getElementById('dropZone');
+    const fileSelected = document.getElementById('fileSelected');
+    const fileName = document.getElementById('fileName');
+    const filePath = document.getElementById('filePath');
+    const clearFile = document.getElementById('clearFile');
+    const outputDir = document.getElementById('outputDir');
+    const selectOutputDirBtn = document.getElementById('selectOutputDir');
+    const openOutputDirBtn = document.getElementById('openOutputDir');
+    const colorPicker = document.getElementById('colorPicker');
+    const colorText = document.getElementById('colorText');
+    const widthInput = document.getElementById('width');
+    const scaleInput = document.getElementById('scale');
+    const convertBtn = document.getElementById('convertBtn');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+
+    let selectedFilePath = null;
+    let lastOutputDir = null;
+
+    // File selection via click
+    dropZone.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!electronApi) {
+        console.error('electronApi not available');
+        return;
+      }
+
+      try {
+        const path = await electronApi.selectFile();
+        if (path) {
+          setSelectedFile(path);
+        }
+      } catch (err) {
+        console.error('File selection error:', err);
+      }
+    });
+
+    // Drag and drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      document.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
+    });
+
+    dropZone.addEventListener('dragenter', () => {
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      if (!dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('dragover');
+      }
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+
+        // Check if it's a markdown file
+        if (file.name.endsWith('.md') || file.name.endsWith('.markdown')) {
+          // In Electron, file.path contains the absolute path
+          if (file.path) {
+            setSelectedFile(file.path);
+          } else {
+            console.error('File path not available. This may be a security restriction.');
+          }
+        }
+      }
+    });
+
+    function setSelectedFile(path) {
+      selectedFilePath = path;
+      const parts = path.split('/');
+      fileName.textContent = parts.pop();
+      filePath.textContent = parts.join('/');
+      dropZone.classList.add('hidden');
+      fileSelected.classList.remove('hidden');
+      convertBtn.disabled = false;
+      result.classList.add('hidden');
+    }
+
+    clearFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedFilePath = null;
+      dropZone.classList.remove('hidden');
+      fileSelected.classList.add('hidden');
+      convertBtn.disabled = true;
+    });
+
+    // Output directory selection
+    selectOutputDirBtn.addEventListener('click', async () => {
+      if (!electronApi) return;
+
+      try {
+        const path = await electronApi.selectOutputDir();
+        if (path) {
+          outputDir.value = path;
+        }
+      } catch (err) {
+        console.error('Directory selection error:', err);
+      }
+    });
+
+    // Open output directory
+    openOutputDirBtn.addEventListener('click', async () => {
+      if (!electronApi) return;
+
+      const dir = outputDir.value || './out';
+      try {
+        await electronApi.openOutputDir(dir);
+      } catch (err) {
+        console.error('Open directory error:', err);
+      }
+    });
+
+    // Color sync
+    colorPicker.addEventListener('input', () => {
+      colorText.value = colorPicker.value;
+    });
+
+    colorText.addEventListener('input', () => {
+      if (/^#[0-9A-Fa-f]{6}$/.test(colorText.value)) {
+        colorPicker.value = colorText.value;
+      }
+    });
+
+    // Convert
+    convertBtn.addEventListener('click', async () => {
+      if (!selectedFilePath || !electronApi) return;
+
+      convertBtn.classList.add('hidden');
+      loading.classList.add('show');
+      result.classList.add('hidden');
+
+      try {
+        const response = await electronApi.convertTables({
+          inputPath: selectedFilePath,
+          outputDir: outputDir.value || './out',
+          color: colorText.value,
+          width: parseInt(widthInput.value) || 1200,
+          scale: parseInt(scaleInput.value) || 2,
+        });
+
+        loading.classList.remove('show');
+        convertBtn.classList.remove('hidden');
+
+        if (response.success) {
+          lastOutputDir = response.outputDir;
+          result.className = 'result success';
+          result.innerHTML = `
+            <div class="result-title">✓ ${response.files.length} 個のテーブルを変換しました</div>
+            <ul class="result-files">
+              ${response.files.map(f => `<li>${f}</li>`).join('')}
+            </ul>
+            <div class="result-actions">
+              <button class="btn btn-success" onclick="openResultFolder()">Finder で開く</button>
+            </div>
+          `;
+        } else {
+          result.className = 'result error';
+          result.innerHTML = `<div class="result-title">✕ エラー</div><p>${response.error}</p>`;
+        }
+
+        result.classList.remove('hidden');
+      } catch (err) {
+        console.error('Convert error:', err);
+        loading.classList.remove('show');
+        convertBtn.classList.remove('hidden');
+        result.className = 'result error';
+        result.innerHTML = `<div class="result-title">✕ エラー</div><p>${err.message}</p>`;
+        result.classList.remove('hidden');
+      }
+    });
+
+    async function openResultFolder() {
+      if (lastOutputDir && electronApi) {
+        await electronApi.openOutputDir(lastOutputDir);
+      }
+    }
+
+    window.openResultFolder = openResultFolder;
+  </script>
+</body>
+</html>

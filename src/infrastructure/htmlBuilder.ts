@@ -46,7 +46,6 @@ export function buildHtml(table: TableData, options: RenderOptions): string {
       --row-even: #FAFAFA;
       --border-color: #E0E0E0;
       --text-color: #333333;
-      --accent-width: 6px;
     }
 
     * {
@@ -66,19 +65,10 @@ export function buildHtml(table: TableData, options: RenderOptions): string {
       position: relative;
     }
 
-    .accent-line {
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: var(--accent-width);
-      background: var(--theme-color);
-    }
-
     .caption {
       background: var(--theme-color);
       color: var(--header-text);
-      padding: 12px 16px 12px calc(var(--accent-width) + 16px);
+      padding: 12px 16px;
       font-size: 16px;
       font-weight: bold;
     }
@@ -86,7 +76,6 @@ export function buildHtml(table: TableData, options: RenderOptions): string {
     table {
       border-collapse: collapse;
       width: 100%;
-      margin-left: var(--accent-width);
     }
 
     th, td {
@@ -113,22 +102,10 @@ export function buildHtml(table: TableData, options: RenderOptions): string {
     tr.row-even td {
       background: var(--row-even);
     }
-
-    /* アクセントラインの調整（キャプションなしの場合） */
-    .no-caption table {
-      border-left: var(--accent-width) solid var(--theme-color);
-      margin-left: 0;
-    }
-
-    .no-caption th:first-child,
-    .no-caption td:first-child {
-      border-left: none;
-    }
   </style>
 </head>
 <body>
-  <div class="container ${table.caption ? "" : "no-caption"}">
-    ${table.caption ? '<div class="accent-line"></div>' : ""}
+  <div class="container">
     ${captionHtml}
     <table>
       <thead>

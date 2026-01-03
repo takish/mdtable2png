@@ -1,16 +1,18 @@
 {
   "name": "mdtable2png",
   "version": "1.0.0",
-  "description": "Markdown テーブルを高品質 PNG 画像に変換する CLI ツール",
+  "description": "Markdown テーブルを高品質 PNG 画像に変換するツール",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist-electron/main.cjs",
   "bin": {
     "mdtable2png": "dist/index.js"
   },
   "scripts": {
     "build": "tsup",
+    "build:electron": "tsup --config tsup.electron.config.ts",
     "dev": "tsup --watch",
     "start": "node dist/index.js",
+    "gui": "pnpm build:electron && electron .",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
@@ -22,7 +24,8 @@
     "table",
     "png",
     "image",
-    "note"
+    "note",
+    "electron"
   ],
   "author": "",
   "license": "MIT",
@@ -30,6 +33,7 @@
     "@biomejs/biome": "^1.9.0",
     "@types/node": "^20.10.0",
     "@types/yargs": "^17.0.32",
+    "electron": "^33.0.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.0",
     "tsup": "^8.0.1",
