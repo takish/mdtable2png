@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "Markdown テーブルを高品質 PNG 画像に変換する CLI ツール",
   "type": "module",
-  "main": "dist/cli/index.js",
+  "main": "dist/index.js",
   "bin": {
-    "mdtable2png": "dist/cli/index.js"
+    "mdtable2png": "dist/index.js"
   },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "start": "node dist/cli/index.js",
+    "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
@@ -36,7 +36,7 @@
     "typescript": "^5.3.0"
   },
   "dependencies": {
-    "puppeteer": "^21.6.0",
+    "puppeteer": "^24.0.0",
     "remark-gfm": "^4.0.0",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.4",
