@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Claude Code
+.claude/
+
+# Build output
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test output
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Output directory
+out/

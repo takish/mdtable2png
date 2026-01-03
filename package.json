@@ -1,0 +1,51 @@
+{
+  "name": "mdtable2png",
+  "version": "1.0.0",
+  "description": "Markdown テーブルを高品質 PNG 画像に変換する CLI ツール",
+  "type": "module",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "mdtable2png": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/cli/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "format": "biome format --write src/",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "markdown",
+    "table",
+    "png",
+    "image",
+    "note"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/node": "^20.10.0",
+    "@types/yargs": "^17.0.32",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "puppeteer": "^21.6.0",
+    "remark-gfm": "^4.0.0",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.4",
+    "unist-util-visit": "^5.0.0",
+    "yargs": "^17.7.2"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "biome check --write"
+    ]
+  }
+}
